@@ -3,8 +3,8 @@ Gem::Specification.new do |spec|
   spec.version       = "0.1.0"
   spec.authors       = ["RainChen"]
   spec.email         = ["hirainchen@gmail.com"]
-  spec.description   = "TODO: Add a description"
-  spec.summary       = "TODO: Add a summary"
+  spec.description   = "A Lita handler to integrate with Capistrano for rails project"
+  spec.summary       = "A Lita handler to integrate with Capistrano for rails project"
   spec.homepage      = "TODO: Add a homepage"
   spec.license       = "TODO: Add a license"
   spec.metadata      = { "lita_plugin_type" => "handler" }
