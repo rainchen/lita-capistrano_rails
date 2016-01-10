@@ -47,6 +47,8 @@ module Lita
         deploy_app(app, env, response)
       end
 
+      private
+
       def deploy_app(app, env, response)
         app_config = config.apps[app]
 
@@ -104,7 +106,6 @@ module Lita
         response.reply(deploy_success)
       end
 
-      private
       def run_in_dir(cmd, dir)
         lita_mark = "LITA=#{Lita::VERSION}"
         _cmd = "cd #{dir} && #{lita_mark} #{cmd}"
