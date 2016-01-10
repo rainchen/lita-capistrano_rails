@@ -32,10 +32,21 @@ module Lita
         response.reply_privately(apps )
       end
 
-      # "deploy #{env} for #{app}"
-      def deploy_app(response)
-        env        = response.matches[0][0]
-        app        = response.matches[0][1]
+      # command: "deploy #{env} for #{app}"
+      def deploy_env_for_app(response)
+        env = response.matches[0][0]
+        app = response.matches[0][1]
+        deploy_app(app, env, response)
+      end
+
+      # command: "deploy #{app}"
+      def deploy_production_for_app(response)
+        env = 'production'
+        app = response.matches[0][0]
+        deploy_app(app, env, response)
+      end
+
+      def deploy_app(app, env, response)
         app_config = config.apps[app]
 
         # check env
@@ -110,7 +121,7 @@ module Lita
 
       def define_static_routes
         self.class.route(
-          %r{^deploy\s+list},
+          %r{deploy\s+list},
           :deploy_list_apps,
           command: true,
           help: { "deploy list" => "List available apps for deploy"}
@@ -120,11 +131,21 @@ module Lita
       # define route for each rapporteur
       def define_dinamic_routes
         config.apps.each do |app, app_config|
+          # define command "deploy APP"
+          self.class.route(
+            %r{deploy (#{app})$},
+            :deploy_production_for_app,
+            command: true,
+            # restrict_to: [:admins, value[:deploy_group]],
+            help: { "deploy #{app}" => "deploy produciton for #{app}"}
+          )
+
+          # define command "deploy ENV for APP"
           # puts "define route: ^deploy\s+(#{app})\s+(#{area})\s+(.+)\s+(.+)"
           envs = app_config[:envs] ? app_config[:envs].keys : ['production']
           self.class.route(
-            %r{^deploy +(\w+) +for +(#{app})$},
-            :deploy_app,
+            %r{deploy +(\w+) +for +(#{app})$},
+            :deploy_env_for_app,
             command: true,
             # restrict_to: [:admins, value[:deploy_group]],
             help: { "deploy #{envs.join("|")} for #{app}" => "deploy ENV for #{app}"}
