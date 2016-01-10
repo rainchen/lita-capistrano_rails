@@ -23,6 +23,7 @@ module Lita
         define_dinamic_routes
       end
 
+      # command: "deploy list"
       def deploy_list_apps(response)
         response.reply_privately('Available apps:')
         apps = config.apps.map do |app, app_config|
