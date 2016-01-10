@@ -94,7 +94,8 @@ module Lita
 
       private
       def run_in_dir(cmd, dir)
-        _cmd = "cd #{dir} && #{cmd}"
+        lita_mark = "LITA=#{Lita::VERSION}"
+        _cmd = "cd #{dir} && #{lita_mark} #{cmd}"
         log.info _cmd
         # running bundle install inside a bundle-managed shell to avoid "RuntimeError: Specs already loaded"
         # see https://github.com/bundler/bundler/issues/1981#issuecomment-6292686
