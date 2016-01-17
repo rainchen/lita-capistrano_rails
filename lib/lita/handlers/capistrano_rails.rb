@@ -1,4 +1,6 @@
 require "step_flow"
+require "open3"
+
 module Lita
   module Handlers
     class CapistranoRails < Handler
@@ -123,11 +125,52 @@ module Lita
       def run_in_dir(cmd, dir)
         lita_mark = "LITA=#{Lita::VERSION}"
         _cmd = "cd #{dir} && #{lita_mark} #{cmd}"
-        log.info _cmd
+        # log.info _cmd
         # running bundle install inside a bundle-managed shell to avoid "RuntimeError: Specs already loaded"
         # see https://github.com/bundler/bundler/issues/1981#issuecomment-6292686
         Bundler.with_clean_env do
-          system(_cmd)
+          # system(_cmd) # can't catch output
+          execute_command(_cmd)
+        end
+      end
+
+      # execute commandline and catch stdout and stderr
+      def execute_command(cmd)
+        log.debug "execute: #{cmd}"
+        full_stdout = String.new
+        full_stderr = String.new
+        started_at  = Time.now
+
+        Open3.popen3(cmd) do |stdin, stdout, stderr, wait_thr|
+          stdout_thread = Thread.new do
+            while (line = stdout.gets) do
+              full_stdout += line
+              # printf line
+            end
+          end
+
+          stderr_thread = Thread.new do
+            while (line = stderr.gets) do
+              full_stderr += line
+            end
+          end
+
+          stdout_thread.join
+          stderr_thread.join
+
+          exit_status = wait_thr.value.to_i
+          finished_at = Time.now
+          runtime     = finished_at - started_at
+
+          {
+            cmd:          cmd,
+            started_at:   started_at,
+            finished_at:  finished_at,
+            exit_status:  exit_status,
+            runtime:      runtime,
+            stdout:       full_stdout,
+            stderr:       full_stderr,
+          }
         end
       end
 
