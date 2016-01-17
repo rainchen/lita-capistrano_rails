@@ -1,6 +1,9 @@
+require "step_flow"
 module Lita
   module Handlers
     class CapistranoRails < Handler
+      include StepFlow
+
       # example:
       # config.handlers.capistrano_rails.apps = {
       #   'app1' => {
@@ -53,57 +56,68 @@ module Lita
         app_config = config.apps[app]
 
         # check env
-        app_envs = app_config[:envs] ? app_config[:envs].keys : ['production'] # use "production" as default env
-        if !app_envs.include?(env)
-          return response.reply(%{"#{env}" is not available env for #{app}, available env is: #{app_envs.join("|")}})
+        branch = \
+        step :validate_deploy_request, :first_step do
+          app_envs = app_config[:envs] ? app_config[:envs].keys : ['production'] # use "production" as default env
+          if !app_envs.include?(env)
+            return response.reply(%{"#{env}" is not available env for #{app}, available env is: #{app_envs.join("|")}})
+          end
+
+          branch = app_config[:envs] ? app_config[:envs][env] : 'master' # use "master" as default branch
+
+          response.reply("I'm deploying #{env} using #{branch} branch for #{app} ...")
+          branch
         end
 
-        branch = app_config[:envs] ? app_config[:envs][env] : 'master' # use "master" as default branch
-
-        response.reply("I'm deploying #{env} using #{branch} branch for #{app} ...")
-
-        # prepare the dirs
-        app_path    = File.expand_path("tmp/capistrano_rails/apps/#{app}")
-        app_source_path = File.expand_path("#{app_path}/source")
-        bundle_path     = File.expand_path("tmp/capistrano_rails/bundle") # sharing bundle to reduce space usage and reuse gems
-        FileUtils.mkdir_p(app_path)
-
-        # get source code
-        log.info 'get source code'
-        # if dir ".git" exists, use `git pull`
-        if File.exists?("#{app_source_path}/.git")
-          log.info 'Found ".git" exists, run `git pull`'
-          # run_in_dir("git checkout #{branch} && git pull", app_source_path)
-          revision = "origin/#{branch}"
-          # since we're in a local branch already, just reset to specified revision rather than merge
-          run_in_dir("git fetch #{verbose} && git reset #{verbose} --hard #{revision}", app_source_path)
-        else
-          log.info 'not found ".git", run `git clone`'
-          run_in_dir("git clone -b #{branch} #{app_config[:git]} source", app_path)
+        app_path, app_source_path, bundle_path = \
+        step :prepare_tmp_dirs do
+          # prepare the dirs
+          app_path    = File.expand_path("tmp/capistrano_rails/apps/#{app}")
+          app_source_path = File.expand_path("#{app_path}/source")
+          bundle_path     = File.expand_path("tmp/capistrano_rails/bundle") # sharing bundle to reduce space usage and reuse gems
+          FileUtils.mkdir_p(app_path)
+          [app_path, app_source_path, bundle_path]
         end
 
-        # if ".git" exists but repo url changed, clean up the dir then run `git clone`
+        step :get_source_code do
+          # if dir ".git" exists, use `git pull`
+          if File.exists?("#{app_source_path}/.git")
+            step_log 'Found ".git" exists, run `git pull`'
+            # run_in_dir("git checkout #{branch} && git pull", app_source_path)
+            revision = "origin/#{branch}"
+            # since we're in a local branch already, just reset to specified revision rather than merge
+            run_in_dir("git fetch #{verbose} && git reset #{verbose} --hard #{revision}", app_source_path)
+          else
+            step_log 'not found ".git", run `git clone`'
+            run_in_dir("git clone -b #{branch} #{app_config[:git]} source", app_path)
+          end
 
-        log.info 'run `bundle install`'
-        # run_in_dir("bundle install --quiet", app_source_path)
-        run_in_dir("bundle install --gemfile #{app_source_path}/Gemfile --path #{bundle_path} --deployment --without darwin test", app_source_path)
-        # TODO: check result, reply failure message
-        # TODO: check result, auto rety 1 time if timeout as "Gem::RemoteFetcher::FetchError: Errno::ETIMEDOUT: Operation timed out"
+          # TODO: if ".git" exists but repo url changed, clean up the dir then run `git clone`
+        end
 
+        step :run_bundle_install do
+          # run_in_dir("bundle install --quiet", app_source_path)
+          run_in_dir("bundle install --gemfile #{app_source_path}/Gemfile --path #{bundle_path} --deployment --without darwin test", app_source_path)
+          # TODO: check result, reply failure message
+          # TODO: check result, auto rety 1 time if timeout as "Gem::RemoteFetcher::FetchError: Errno::ETIMEDOUT: Operation timed out"
+        end
 
-        # TODO: check "Capfile"
-        # if "Capfile" not exits, reply "not a capistrano project"
-        log.info "run \`cap #{env} deploy\`"
-        run_in_dir("bundle exec cap #{env} deploy", app_source_path)
-        # TODO: check result, reply failure message
+        step :run_cap_deploy do
+          # TODO: check "Capfile"
+          # if "Capfile" not exits, reply "not a capistrano project"
+          run_in_dir("bundle exec cap #{env} deploy", app_source_path)
+          # TODO: check result, reply failure message
+        end
 
-        deploy_success = "deploy #{env} for #{app} finished!"
+        step :reply_deploy_success, :last_step do
+          deploy_success = "deploy #{env} for #{app} finished!"
 
-        # TODO: get "app_url"
-        app_url = ""
-        deploy_success += ", please visit #{app_url}" if !app_url.empty?
+          # TODO: get "app_url"
+          app_url = ""
+          deploy_success += ", please visit #{app_url}" if !app_url.empty?
 
-        response.reply(deploy_success)
+          response.reply(deploy_success)
+        end
       end
 
       def run_in_dir(cmd, dir)
