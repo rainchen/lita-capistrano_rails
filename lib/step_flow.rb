@@ -26,7 +26,7 @@ module StepFlow
     @flow_steps[flow].push step_key
     step_no = @flow_steps[flow].size
     log.info "#{flow} flow start:" if is_first
-    log.info "  Running #{flow} step(#{step_no}):#{step_key}"
+    log.info "  #{flow} #{step_no}):#{step_key}"
     result = nil
     # capture_stdout do
       result = yield
