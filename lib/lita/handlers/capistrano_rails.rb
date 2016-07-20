@@ -112,7 +112,7 @@ module Lita
           # run_in_dir("bundle install --quiet", app_source_path)
           run_in_dir("bundle install --gemfile #{app_source_path}/Gemfile --path #{bundle_path} --deployment --without darwin test", app_source_path)
           # TODO: check result, reply failure message
-          # TODO: check result, auto rety 1 time if timeout as "Gem::RemoteFetcher::FetchError: Errno::ETIMEDOUT: Operation timed out"
+          # TODO: check result, auto retry 1 time if timeout as "Gem::RemoteFetcher::FetchError: Errno::ETIMEDOUT: Operation timed out"
         end
 
         step :run_cap_deploy do
