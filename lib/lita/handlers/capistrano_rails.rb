@@ -97,6 +97,17 @@ module Lita
           # TODO: if ".git" exists but repo url changed, clean up the dir then run `git clone`
         end
 
+        step :hack_gemfile do
+          # disable "ruby 'x.y.z'" config in Gemfile
+          # to avoid errors like "Your Ruby version is 2.2.4, but your Gemfile specified 2.1.2 (Bundler::RubyVersionMismatch)"
+          gemfile_path = "#{app_source_path}/Gemfile"
+          gemfile_content = File.read gemfile_path
+          if gemfile_content.match(/^ruby .+/)
+            gemfile_content.sub!(/(^ruby .+)/, '# \1 # hacked by Lita::Handlers::CapistranoRails to avoid "Bundler::RubyVersionMismatch" problem')
+            File.open(gemfile_path, 'w') { |gemfile| gemfile.write(gemfile_content) }
+          end
+        end
+
         step :run_bundle_install do
           # run_in_dir("bundle install --quiet", app_source_path)
           run_in_dir("bundle install --gemfile #{app_source_path}/Gemfile --path #{bundle_path} --deployment --without darwin test", app_source_path)
