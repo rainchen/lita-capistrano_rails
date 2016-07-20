@@ -118,8 +118,12 @@ module Lita
         step :run_cap_deploy do
           # TODO: check "Capfile"
           # if "Capfile" not exits, reply "not a capistrano project"
-          run_in_dir("bundle exec cap #{env} deploy", app_source_path)
-          # TODO: check result, reply failure message
+          result = run_in_dir("bundle exec cap #{env} deploy", app_source_path)
+          if result[:stderr] != ""
+            failure = %{errrors while executing: "#{result[:cmd]}"\n}
+            failure << result[:stderr]
+            step_fails(response, failure)
+          end
         end
 
         step :reply_deploy_success, :last_step do

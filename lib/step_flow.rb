@@ -5,10 +5,12 @@ module StepFlow
   #   "deploy_app" [:valid_request, :prepare_dirs]
   # }
   attr_reader :flow_steps
+  attr_reader :step_failed
 
   private
 
   def step(step_key, first_or_last = nil, &block)
+    return if @step_failed
     is_first = (first_or_last == :first_step)
     is_last  = (first_or_last == :last_step)
     flow = caller_locations(1,1)[0].label # # get from caller
@@ -38,6 +40,16 @@ module StepFlow
 
   def step_log(message)
     log.info "    #{message}"
+  end
+
+  # mark a step fails, reply errors message, stop rest steps
+  def step_fails(response, failure)
+    @step_failed = true
+    flow = @flow_steps.keys.last
+    step_no = @flow_steps[flow].size
+    step_key = @flow_steps[flow].last
+    failure = %{deploy faild on #{flow}(#{step_no}):#{step_key}\n} + failure
+    response.reply(failure)
   end
 
 end
