@@ -5,7 +5,7 @@ Gem::Specification.new do |spec|
   spec.email         = ["hirainchen@gmail.com"]
   spec.description   = "A Lita handler to integrate with Capistrano for rails project"
   spec.summary       = "A Lita handler to integrate with Capistrano for rails project"
-  spec.homepage      = "TODO: Add a homepage"
+  spec.homepage      = "https://github.com/rainchen/lita-capistrano_rails"
   spec.license       = "TODO: Add a license"
   spec.metadata      = { "lita_plugin_type" => "handler" }
 
